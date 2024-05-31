@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
-const port = 3000;
+const port = 5000;
 
 // Middleware
 app.use(cors());
@@ -83,7 +83,7 @@ async function run() {
 run().catch(console.dir);
 
 app.get("/", (req, res) => {
-  res.send("Hello World! http://localhost:3000/");
+  res.send(`Hello World! http://localhost:${port}/`);
 });
 
 app.listen(port, () => {
