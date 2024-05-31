@@ -68,6 +68,14 @@ async function run() {
       res.send(result);
     });
 
+    // basic DELETE req for deleting a single recipe
+    app.delete("/recipes/:id", async (req, res) => {
+      const { id } = req.params;
+      const query = { _id: new ObjectId(id) };
+      const result = await recipesCollection.deleteOne(query);
+      res.send(result);
+    });
+
     console.log("Successfully connected to MongoDB!");
   } finally {
   }
