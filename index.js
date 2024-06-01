@@ -21,6 +21,19 @@ function generateToken(userInfo) {
   return token;
 }
 
+// verify JWT token
+
+function verifyToken(req, res, next) {
+  const token = req.headers.authorization.split(" ")[1];
+  const verify = jwt.verify(token, "secret"); // {email,iat,exp}
+  if (!verify?.email) {
+    return res.send("You are not authorized");
+  }
+  req.user = verify.email;
+
+  next();
+}
+
 const uri =
   "mongodb+srv://asifaowadud:sof6vxfRNfUEvdCg@cluster0.gjcwx8p.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
@@ -145,10 +158,27 @@ async function run() {
       res.send(user);
     });
 
-    // PATCH req for updating UserInfo in DB
-    app.patch("/users/:email", async (req, res) => {
+    // noJWT - basic PATCH req for updating UserInfo in DB
+    /* app.patch("/users/:email", async (req, res) => {
       const { email } = req.params;
       const updatedUser = req.body;
+      const query = { email }; // { email: email }
+      const updateDoc = {
+        $set: updatedUser,
+      };
+      const options = { upsert: true }; // if the document does not exist, insert it
+      const result = await usersCollection.updateOne(query, updateDoc, options);
+      res.send(result);
+    }); */
+    // JWT PATCH req for updating UserInfo in DB
+    app.patch("/users/:email", verifyToken, async (req, res) => {
+      const { email } = req.params;
+      const updatedUser = req.body;
+      console.log(req.user); //got the email as .user from verifyToken
+      
+      if (req.user !== email) {
+        return res.send("You are not authorized to update this user");
+      }
       const query = { email }; // { email: email }
       const updateDoc = {
         $set: updatedUser,
@@ -160,7 +190,9 @@ async function run() {
 
     // create categoriesCollection here
     const categoriesDb = client.db("categories");
-    const categoriesCollection = categoriesDb.collection("categoriesCollection");
+    const categoriesCollection = categoriesDb.collection(
+      "categoriesCollection"
+    );
 
     // basic GET req for getting all categories
     app.get("/categories", async (req, res) => {
