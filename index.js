@@ -1,12 +1,25 @@
 const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const jwt = require("jsonwebtoken");
 const app = express();
 const port = 5000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// JWT token generation
+function generateToken(userInfo) {
+  const token = jwt.sign(
+    {
+      email: userInfo.email,
+    },
+    "secret",
+    { expiresIn: "7d" }
+  );
+  return token;
+}
 
 const uri =
   "mongodb+srv://asifaowadud:sof6vxfRNfUEvdCg@cluster0.gjcwx8p.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
@@ -80,8 +93,8 @@ async function run() {
     const usersDb = client.db("usersDb");
     const usersCollection = usersDb.collection("usersCollection");
 
-    // basic POST req for creating a user if not exits
-    app.post("/users", async (req, res) => {
+    // noJWT - basic POST req for creating a user if not exits
+    /* app.post("/users", async (req, res) => {
       const user = req.body;
       const query = { email: user?.email };
       const isExistingUser = await usersCollection.findOne(query);
@@ -93,6 +106,27 @@ async function run() {
       }
       const result = await usersCollection.insertOne(user);
       res.send(result);
+    }); */
+
+    // JWT - final protected POST req for creating a user
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const token = generateToken(user);
+      const query = { email: user?.email };
+      const isExistingUser = await usersCollection.findOne(query);
+      if (isExistingUser?.email) {
+        return res.send({
+          status: "success",
+          message: "Login Successfull.User already exists!",
+          token,
+        });
+      }
+      const result = await usersCollection.insertOne(user);
+      res.send({
+        status: "success",
+        message: "User created successfully!",
+        token,
+      });
     });
 
     // GET req for getting UserInfo in DB by id for "editProfile" page
@@ -122,6 +156,17 @@ async function run() {
       const options = { upsert: true }; // if the document does not exist, insert it
       const result = await usersCollection.updateOne(query, updateDoc, options);
       res.send(result);
+    });
+
+    // create categoriesCollection here
+    const categoriesDb = client.db("categories");
+    const categoriesCollection = categoriesDb.collection("categoriesCollection");
+
+    // basic GET req for getting all categories
+    app.get("/categories", async (req, res) => {
+      const cursor4Categories = categoriesCollection.find({});
+      const results = await cursor4Categories.toArray();
+      res.send(results);
     });
 
     console.log("Successfully connected to MongoDB!");
